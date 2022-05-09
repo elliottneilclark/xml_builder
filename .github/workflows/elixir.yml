@@ -29,7 +29,6 @@ jobs:
           mix compile
       - name: Run tests
         run: |
-          mix format --check-formatted
           mix credo --strict
           mix tests
           mix test
