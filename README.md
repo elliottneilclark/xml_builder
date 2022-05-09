@@ -1,13 +1,21 @@
 XML Builder
 ===========
 
-[![CI](https://github.com/joshnuss/xml_builder/workflows/mix/badge.svg)](https://github.com/joshnuss/xml_builder/actions)
-[![Module Version](https://img.shields.io/hexpm/v/xml_builder.svg)](https://hex.pm/packages/xml_builder)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/xml_builder/)
-[![Total Download](https://img.shields.io/hexpm/dt/xml_builder.svg)](https://hex.pm/packages/xml_builder)
-[![License](https://img.shields.io/hexpm/l/xml_builder.svg)](https://github.com/joshnuss/xml_builder/blob/master/LICENSE)
-[![Last Updated](https://img.shields.io/github/last-commit/joshnuss/xml_builder.svg)](https://github.com/joshnuss/xml_builder/commits/master)
 
+
+[![CI](https://github.com/am-kantox/xml_builder/workflows/mix/badge.svg)](https://github.com/am-kantox/xml_builder/actions)
+[![Module Version](https://img.shields.io/hexpm/v/xml_builder_ex.svg)](https://hex.pm/packages/xml_builder_ex)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/xml_builder_ex/)
+[![Total Download](https://img.shields.io/hexpm/dt/xml_builder_ex.svg)](https://hex.pm/packages/xml_builder_ex)
+[![License](https://img.shields.io/hexpm/l/xml_builder_ex.svg)](https://github.com/am-kantox/xml_builder/blob/master/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/am-kantox/xml_builder.svg)](https://github.com/am-kantox/xml_builder/commits/master)
+
+
+## 🔱 of [`XmlBuilder`](https://github.com/joshnuss/xml_builder)
+
+This is a fork of `XmlBuilder` originally written by _Joshua Nussbaum_. OIt’s fully backward compatible and adds several goodnesses like `Access` implementation for XML‌ AST, custom formatters, per-element formatters, listeners and `pre-/post-walk` of the resulting AST.
+
+If in doubt, why would you want to use this fork, please use the original `XmlBuilder` package, it’d suit your needs perfectly fine.
 
 ## Overview
 
@@ -248,4 +256,4 @@ The default is to formatting with indentation, which is equivalent to `XmlBuilde
 
 ## License
 
-This source code is licensed under the [MIT License](https://github.com/joshnuss/xml_builder/blob/master/LICENSE). Copyright (c) 2014-present, Joshua Nussbaum. All rights reserved.
+This source code is licensed under the [MIT License](https://github.com/am-kantox/xml_builder/blob/master/LICENSE). Copyright (c) 2014-present, Joshua Nussbaum. All rights reserved.

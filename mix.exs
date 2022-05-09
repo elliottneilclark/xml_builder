@@ -2,7 +2,7 @@ defmodule XmlBuilder.Mixfile do
   use Mix.Project
 
   @app :xml_builder_ex
-  @version "2.3.0"
+  @version "3.0.0"
 
   def project do
     [
