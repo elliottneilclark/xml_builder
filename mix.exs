@@ -37,7 +37,7 @@ defmodule XmlBuilder.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 1.4.0", only: [:ci], runtime: false},
+      {:credo, "~> 1.4.0", only: [:ci, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:ci], runtime: false},
       {:excoveralls, "~> 0.14", only: [:test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev]}
