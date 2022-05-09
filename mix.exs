@@ -46,14 +46,14 @@ defmodule XmlBuilder.Mixfile do
 
   defp docs do
     [
+      main: "readme",
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
       # logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/#{@app}",
-      extras: ~w[README.md],
+      extras: ["README.md"],
       groups_for_modules: [
-        # XmlBuilder
-
+        XmlBuilder,
         Formats: [
           XmlBuilder.Format.None,
           XmlBuilder.Format.Indented,
