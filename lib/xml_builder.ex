@@ -20,17 +20,9 @@ defmodule XmlBuilder do
       "<person occupation=\\\"Developer\\\">Josh</person>"
   """
 
-  defmacrop is_blank_attrs(attrs) do
-    quote do: is_blank_map(unquote(attrs)) or is_blank_list(unquote(attrs))
-  end
-
-  defmacrop is_blank_list(list) do
-    quote do: is_nil(unquote(list)) or unquote(list) == []
-  end
-
-  defmacrop is_blank_map(map) do
-    quote do: is_nil(unquote(map)) or unquote(map) == %{}
-  end
+  defguardp is_blank_map(map) when is_nil(map) or (is_map(map) and map_size(map) == 0)
+  defguardp is_blank_list(list) when is_nil(list) or list == []
+  defguardp is_blank_attrs(attrs) when is_blank_map(attrs) or is_blank_list(attrs)
 
   @doc """
   Generate an XML document.
@@ -100,41 +92,243 @@ defmodule XmlBuilder do
         {:last, nil, "Jobs"}
       ]}
   """
-  def element(name) when is_bitstring(name),
-    do: element({nil, nil, name})
 
-  def element({:iodata, _data} = iodata),
-    do: element({nil, nil, iodata})
+  @spec element(
+          name :: XmlBuilder.Element.name(),
+          attrs :: XmlBuilder.Element.attrs(),
+          content :: XmlBuilder.Element.contents()
+        ) :: XmlBuilder.Element.t() | [XmlBuilder.Element.t()]
+  defdelegate element(a1), to: XmlBuilder.Element
+  defdelegate element(a1, a2), to: XmlBuilder.Element
+  defdelegate element(a1, a2, a3), to: XmlBuilder.Element
 
-  def element(name) when is_bitstring(name) or is_atom(name),
-    do: element({name})
+  defp elements_with_prolog([first | rest]) when length(rest) > 0,
+    do: [first_element(first) | element(rest)]
 
-  def element(list) when is_list(list),
-    do: list |> Enum.reject(&is_nil/1) |> Enum.map(&element/1)
+  defp elements_with_prolog(element_spec),
+    do: element(element_spec)
 
-  def element({name}),
-    do: element({name, nil, nil})
+  defp first_element({:doctype, args} = doctype_decl) when is_tuple(args),
+    do: doctype_decl
 
-  def element({name, attrs}) when is_map(attrs),
-    do: element({name, attrs, nil})
+  defp first_element(element_spec),
+    do: element(element_spec)
 
-  def element({name, content}),
-    do: element({name, nil, content})
+  defp format(content, level, options, name \\ nil)
 
-  def element({name, attrs, content}) when is_list(content),
-    do: {name, attrs, element(content)}
+  defp format(:xml_decl, 0, options, _name) do
+    encoding = Keyword.get(options, :encoding, "UTF-8")
 
-  def element({name, attrs, content}),
-    do: {name, attrs, content}
+    standalone =
+      case Keyword.get(options, :standalone, nil) do
+        true -> ~s| standalone="yes"|
+        false -> ~s| standalone="no"|
+        nil -> ""
+      end
 
-  def element(name, attrs) when is_map(attrs),
-    do: element({name, attrs, nil})
+    ['<?xml version="1.0" encoding="', to_string(encoding), ?", standalone, '?>']
+  end
 
-  def element(name, content),
-    do: element({name, nil, content})
+  defp format({:doctype, {:system, name, system}}, 0, _options, _name),
+    do: ['<!DOCTYPE ', to_string(name), ' SYSTEM "', to_string(system), '">']
 
-  def element(name, attrs, content),
-    do: element({name, attrs, content})
+  defp format({:doctype, {:public, name, public, system}}, 0, _options, _name),
+    do: [
+      '<!DOCTYPE ',
+      to_string(name),
+      ' PUBLIC "',
+      to_string(public),
+      '" "',
+      to_string(system),
+      '">'
+    ]
+
+  defp format(string, level, options, name) when is_bitstring(string),
+    do: format({nil, nil, string}, level, options, name)
+
+  defp format(list, level, options, name) when is_list(list) do
+    formatter = formatter(name, options)
+    map_intersperse(list, formatter.intersperse(), &format(&1, level, options, name))
+  end
+
+  defp format({nil, nil, content}, level, options, name) when is_bitstring(content) do
+    formatter = formatter(name, options)
+    [formatter.indent(level), to_string(content)]
+  end
+
+  defp format({nil, nil, {:iodata, iodata}}, _level, _options, _name), do: iodata
+
+  defp format({name, attrs, content}, level, options, _name)
+       when is_blank_attrs(attrs) and is_blank_list(content) do
+    formatter = formatter(name, options)
+    [formatter.indent(level), '<', to_string(name), '/>']
+  end
+
+  defp format({name, attrs, content}, level, options, _name) when is_blank_list(content) do
+    formatter = formatter(name, options)
+
+    [
+      formatter.indent(level),
+      '<',
+      to_string(name),
+      ' ',
+      format_attributes(attrs),
+      '/>'
+    ]
+  end
+
+  defp format({name, attrs, content}, level, options, _name)
+       when is_blank_attrs(attrs) and not is_list(content) do
+    formatter = formatter(name, options)
+
+    [
+      formatter.indent(level),
+      '<',
+      to_string(name),
+      '>',
+      format_content(name, content, level + 1, options),
+      '</',
+      to_string(name),
+      '>'
+    ]
+  end
+
+  defp format({name, attrs, content}, level, options, _name)
+       when is_blank_attrs(attrs) and is_list(content) do
+    formatter = formatter(name, options)
+    format_char = formatter.intersperse()
+
+    [
+      formatter.indent(level),
+      '<',
+      to_string(name),
+      '>',
+      format_content(name, content, level + 1, options),
+      format_char,
+      formatter.indent(level),
+      '</',
+      to_string(name),
+      '>'
+    ]
+  end
+
+  defp format({name, attrs, content}, level, options, _name)
+       when not is_blank_attrs(attrs) and not is_list(content) do
+    formatter = formatter(name, options)
+
+    [
+      formatter.indent(level),
+      '<',
+      to_string(name),
+      ' ',
+      format_attributes(attrs),
+      '>',
+      format_content(name, content, level + 1, options),
+      '</',
+      to_string(name),
+      '>'
+    ]
+  end
+
+  defp format({name, attrs, content}, level, options, _name)
+       when not is_blank_attrs(attrs) and is_list(content) do
+    formatter = formatter(name, options)
+    format_char = formatter.intersperse()
+
+    [
+      formatter.indent(level),
+      '<',
+      to_string(name),
+      ' ',
+      format_attributes(attrs),
+      '>',
+      format_content(name, content, level + 1, options),
+      format_char,
+      formatter.indent(level),
+      '</',
+      to_string(name),
+      '>'
+    ]
+  end
+
+  defp formatter(name, options) do
+    case Keyword.get(options, :format) do
+      :none ->
+        XmlBuilder.Format.None
+
+      default when default in [nil, :indent, :indented] ->
+        XmlBuilder.Format.Indented
+
+      custom when is_atom(custom) ->
+        if Code.ensure_loaded?(custom), do: custom, else: XmlBuilder.Format.Indented
+
+      custom when is_list(custom) ->
+        format = Keyword.get_lazy(custom, name, fn -> Keyword.get(custom, :*, :indent) end)
+        formatter(name, Keyword.put(options, :format, format))
+    end
+  end
+
+  defp format_content(name, children, level, options) when is_list(children) do
+    format_char = formatter(name, options).intersperse()
+    [format_char, map_intersperse(children, format_char, &format(&1, level, options, name))]
+  end
+
+  defp format_content(_name, content, _level, _options),
+    do: escape(content)
+
+  defp format_attributes(attrs),
+    do:
+      map_intersperse(attrs, " ", fn {name, value} ->
+        [to_string(name), '=', quote_attribute_value(value)]
+      end)
+
+  defp quote_attribute_value(val) when not is_bitstring(val),
+    do: val |> to_string() |> quote_attribute_value()
+
+  defp quote_attribute_value(val) do
+    escape? = String.contains?(val, ["\"", "&", "<"])
+
+    case escape? do
+      true -> [?", escape(val), ?"]
+      false -> [?", val, ?"]
+    end
+  end
+
+  defp escape({:iodata, iodata}), do: iodata
+  defp escape({:safe, data}) when is_bitstring(data), do: data
+  defp escape({:safe, data}), do: to_string(data)
+  defp escape({:cdata, data}), do: ["<![CDATA[", data, "]]>"]
+
+  defp escape(data) when is_binary(data),
+    do: data |> escape_string() |> to_string()
+
+  defp escape(data) when not is_bitstring(data),
+    do: data |> to_string() |> escape_string() |> to_string()
+
+  defp escape_string(""), do: ""
+  defp escape_string(<<"&"::utf8, rest::binary>>), do: escape_entity(rest)
+  defp escape_string(<<"<"::utf8, rest::binary>>), do: ["&lt;" | escape_string(rest)]
+  defp escape_string(<<">"::utf8, rest::binary>>), do: ["&gt;" | escape_string(rest)]
+  defp escape_string(<<"\""::utf8, rest::binary>>), do: ["&quot;" | escape_string(rest)]
+  defp escape_string(<<"'"::utf8, rest::binary>>), do: ["&apos;" | escape_string(rest)]
+  defp escape_string(<<c::utf8, rest::binary>>), do: [c | escape_string(rest)]
+
+  defp escape_entity(<<"amp;"::utf8, rest::binary>>), do: ["&amp;" | escape_string(rest)]
+  defp escape_entity(<<"lt;"::utf8, rest::binary>>), do: ["&lt;" | escape_string(rest)]
+  defp escape_entity(<<"gt;"::utf8, rest::binary>>), do: ["&gt;" | escape_string(rest)]
+  defp escape_entity(<<"quot;"::utf8, rest::binary>>), do: ["&quot;" | escape_string(rest)]
+  defp escape_entity(<<"apos;"::utf8, rest::binary>>), do: ["&apos;" | escape_string(rest)]
+  defp escape_entity(rest), do: ["&amp;" | escape_string(rest)]
+
+  # Remove when support for Elixir <v1.10 is dropped
+  @compile {:inline, map_intersperse: 3}
+  if function_exported?(Enum, :map_intersperse, 3) do
+    defp map_intersperse(enumerable, separator, mapper),
+      do: Enum.map_intersperse(enumerable, separator, mapper)
+  else
+    defp map_intersperse(enumerable, separator, mapper),
+      do: enumerable |> Enum.map(mapper) |> Enum.intersperse(separator)
+  end
 
   @doc """
   Creates a DOCTYPE declaration with a system or public identifier.
@@ -189,7 +383,11 @@ defmodule XmlBuilder do
     do: {:doctype, {:public, name, public_identifier, system_identifier}}
 
   @doc """
-  Generate a binary from an XML tree
+  Generate a binary from an XML tree. Accepts an optional parameter
+    `format: Format.Module.Name` to specify the formatter to use.
+
+  The `format` parameter might be shortened to `:none` and `:indented`
+    for built-in formatters.
 
   Returns a `binary`.
 
@@ -204,17 +402,29 @@ defmodule XmlBuilder do
       iex> XmlBuilder.generate({:name, nil, [{:first, nil, "Steve"}]}, format: :none)
       "<name><first>Steve</first></name>"
 
-      iex> XmlBuilder.generate({:name, nil, [{:first, nil, "Steve"}]}, whitespace: "")
-      "<name>\\n<first>Steve</first>\\n</name>"
-
       iex> XmlBuilder.generate({:name, nil, [{:first, nil, "Steve"}]})
       "<name>\\n  <first>Steve</first>\\n</name>"
 
       iex> XmlBuilder.generate(:xml_decl, encoding: "ISO-8859-1")
       ~s|<?xml version="1.0" encoding="ISO-8859-1"?>|
+
+      iex> XmlBuilder.generate(
+      ...>  [{:person, %{},
+      ...>    [{:name, %{id: 123}, "Josh"},
+      ...>     {:age, %{}, "21"}]}], format: XmlBuilder.Format.None)
+      "<person><name id=\\\"123\\\">Josh</name><age>21</age></person>"
+
+      iex> XmlBuilder.generate(
+      ...>  [{:person, %{},
+      ...>    [{:name, %{id: 123}, "Josh"},
+      ...>     {:age, %{}, "21"}]}], format: :none)
+      "<person><name id=\\\"123\\\">Josh</name><age>21</age></person>"
   """
-  def generate(any, options \\ []),
-    do: format(any, 0, options) |> IO.iodata_to_binary()
+  def generate(any, opts \\ []) do
+    any
+    |> generate_iodata(opts)
+    |> IO.chardata_to_string()
+  end
 
   @doc """
   Similar to `generate/2`, but returns `iodata` instead of a `binary`.
@@ -224,213 +434,5 @@ defmodule XmlBuilder do
       iex> XmlBuilder.generate_iodata(XmlBuilder.element(:person))
       ["", '<', "person", '/>']
   """
-  def generate_iodata(any, options \\ []), do: format(any, 0, options)
-
-  defp format(content, level, options, name \\ nil)
-
-  defp format(:xml_decl, 0, options, _name) do
-    encoding = Keyword.get(options, :encoding, "UTF-8")
-
-    standalone =
-      case Keyword.get(options, :standalone, nil) do
-        true -> ~s| standalone="yes"|
-        false -> ~s| standalone="no"|
-        nil -> ""
-      end
-
-    ['<?xml version="1.0" encoding="', to_string(encoding), ?", standalone, '?>']
-  end
-
-  defp format({:doctype, {:system, name, system}}, 0, _options, _name),
-    do: ['<!DOCTYPE ', to_string(name), ' SYSTEM "', to_string(system), '">']
-
-  defp format({:doctype, {:public, name, public, system}}, 0, _options, _name),
-    do: [
-      '<!DOCTYPE ',
-      to_string(name),
-      ' PUBLIC "',
-      to_string(public),
-      '" "',
-      to_string(system),
-      '">'
-    ]
-
-  defp format(string, level, options, name) when is_bitstring(string),
-    do: format({nil, nil, string}, level, options, name)
-
-  defp format(list, level, options, name) when is_list(list) do
-    formatter = formatter(name, options)
-    map_intersperse(list, formatter.line_break(), &format(&1, level, options, name))
-  end
-
-  defp format({nil, nil, content}, level, options, name) when is_bitstring(content),
-    do: [indent(name, level, options), to_string(content)]
-
-  defp format({nil, nil, {:iodata, iodata}}, _level, _options, _name), do: iodata
-
-  defp format({name, attrs, content}, level, options, _name)
-       when is_blank_attrs(attrs) and is_blank_list(content),
-       do: [indent(name, level, options), '<', to_string(name), '/>']
-
-  defp format({name, attrs, content}, level, options, _name) when is_blank_list(content),
-    do: [indent(name, level, options), '<', to_string(name), ' ', format_attributes(attrs), '/>']
-
-  defp format({name, attrs, content}, level, options, _name)
-       when is_blank_attrs(attrs) and not is_list(content),
-       do: [
-         indent(name, level, options),
-         '<',
-         to_string(name),
-         '>',
-         format_content(name, content, level + 1, options),
-         '</',
-         to_string(name),
-         '>'
-       ]
-
-  defp format({name, attrs, content}, level, options, _name)
-       when is_blank_attrs(attrs) and is_list(content) do
-    format_char = formatter(name, options).line_break()
-
-    [
-      indent(name, level, options),
-      '<',
-      to_string(name),
-      '>',
-      format_content(name, content, level + 1, options),
-      format_char,
-      indent(name, level, options),
-      '</',
-      to_string(name),
-      '>'
-    ]
-  end
-
-  defp format({name, attrs, content}, level, options, _name)
-       when not is_blank_attrs(attrs) and not is_list(content),
-       do: [
-         indent(name, level, options),
-         '<',
-         to_string(name),
-         ' ',
-         format_attributes(attrs),
-         '>',
-         format_content(name, content, level + 1, options),
-         '</',
-         to_string(name),
-         '>'
-       ]
-
-  defp format({name, attrs, content}, level, options, _name)
-       when not is_blank_attrs(attrs) and is_list(content) do
-    format_char = formatter(name, options).line_break()
-
-    [
-      indent(name, level, options),
-      '<',
-      to_string(name),
-      ' ',
-      format_attributes(attrs),
-      '>',
-      format_content(name, content, level + 1, options),
-      format_char,
-      indent(name, level, options),
-      '</',
-      to_string(name),
-      '>'
-    ]
-  end
-
-  defp elements_with_prolog([first | rest]) when length(rest) > 0,
-    do: [first_element(first) | element(rest)]
-
-  defp elements_with_prolog(element_spec),
-    do: element(element_spec)
-
-  defp first_element({:doctype, args} = doctype_decl) when is_tuple(args),
-    do: doctype_decl
-
-  defp first_element(element_spec),
-    do: element(element_spec)
-
-  defp formatter(name, options) do
-    case Keyword.get(options, :format) do
-      :none ->
-        XmlBuilder.Format.None
-
-      default when default in [nil, :indent, :indented] ->
-        XmlBuilder.Format.Indented
-
-      custom when is_list(custom) ->
-        format = Keyword.get_lazy(custom, name, fn -> Keyword.get(custom, :*, :indent) end)
-        formatter(name, Keyword.put(options, :format, format))
-    end
-  end
-
-  defp format_content(name, children, level, options) when is_list(children) do
-    format_char = formatter(name, options).line_break()
-    [format_char, map_intersperse(children, format_char, &format(&1, level, options, name))]
-  end
-
-  defp format_content(_name, content, _level, _options),
-    do: escape(content)
-
-  defp format_attributes(attrs),
-    do:
-      map_intersperse(attrs, " ", fn {name, value} ->
-        [to_string(name), '=', quote_attribute_value(value)]
-      end)
-
-  defp indent(name, level, options) do
-    formatter = formatter(name, options)
-    formatter.indentation(level, options)
-  end
-
-  defp quote_attribute_value(val) when not is_bitstring(val),
-    do: quote_attribute_value(to_string(val))
-
-  defp quote_attribute_value(val) do
-    escape? = String.contains?(val, ["\"", "&", "<"])
-
-    case escape? do
-      true -> [?", escape(val), ?"]
-      false -> [?", val, ?"]
-    end
-  end
-
-  defp escape({:iodata, iodata}), do: iodata
-  defp escape({:safe, data}) when is_bitstring(data), do: data
-  defp escape({:safe, data}), do: to_string(data)
-  defp escape({:cdata, data}), do: ["<![CDATA[", data, "]]>"]
-
-  defp escape(data) when is_binary(data),
-    do: data |> escape_string() |> to_string()
-
-  defp escape(data) when not is_bitstring(data),
-    do: data |> to_string() |> escape_string() |> to_string()
-
-  defp escape_string(""), do: ""
-  defp escape_string(<<"&"::utf8, rest::binary>>), do: escape_entity(rest)
-  defp escape_string(<<"<"::utf8, rest::binary>>), do: ["&lt;" | escape_string(rest)]
-  defp escape_string(<<">"::utf8, rest::binary>>), do: ["&gt;" | escape_string(rest)]
-  defp escape_string(<<"\""::utf8, rest::binary>>), do: ["&quot;" | escape_string(rest)]
-  defp escape_string(<<"'"::utf8, rest::binary>>), do: ["&apos;" | escape_string(rest)]
-  defp escape_string(<<c::utf8, rest::binary>>), do: [c | escape_string(rest)]
-
-  defp escape_entity(<<"amp;"::utf8, rest::binary>>), do: ["&amp;" | escape_string(rest)]
-  defp escape_entity(<<"lt;"::utf8, rest::binary>>), do: ["&lt;" | escape_string(rest)]
-  defp escape_entity(<<"gt;"::utf8, rest::binary>>), do: ["&gt;" | escape_string(rest)]
-  defp escape_entity(<<"quot;"::utf8, rest::binary>>), do: ["&quot;" | escape_string(rest)]
-  defp escape_entity(<<"apos;"::utf8, rest::binary>>), do: ["&apos;" | escape_string(rest)]
-  defp escape_entity(rest), do: ["&amp;" | escape_string(rest)]
-
-  # Remove when support for Elixir <v1.10 is dropped
-  @compile {:inline, map_intersperse: 3}
-  if function_exported?(Enum, :map_intersperse, 3) do
-    defp map_intersperse(enumerable, separator, mapper),
-      do: Enum.map_intersperse(enumerable, separator, mapper)
-  else
-    defp map_intersperse(enumerable, separator, mapper),
-      do: enumerable |> Enum.map(mapper) |> Enum.intersperse(separator)
-  end
+  def generate_iodata(any, opts \\ []), do: format(any, 0, opts)
 end

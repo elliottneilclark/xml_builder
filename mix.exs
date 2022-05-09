@@ -1,21 +1,33 @@
 defmodule XmlBuilder.Mixfile do
   use Mix.Project
 
-  @source_url "https://github.com/joshnuss/xml_builder"
+  @app :xml_builder_ex
+  @version "2.3.0"
 
   def project do
     [
-      app: :xml_builder,
-      version: "2.2.0",
+      app: @app,
+      version: @version,
       elixir: "~> 1.6",
       deps: deps(),
       docs: docs(),
-      package: [
-        maintainers: ["Joshua Nussbaum"],
-        licenses: ["MIT"],
-        links: %{GitHub: @source_url}
+      package: package(),
+      description: description(),
+      aliases: aliases(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        credo: :ci,
+        dialyzer: :ci,
+        tests: :test,
+        "coveralls.json": :test,
+        "coveralls.html": :test,
+        "quality.ci": :ci
       ],
-      description: "XML builder for Elixir"
+      dialyzer: [
+        plt_file: {:no_warn, ".dialyzer/plts/dialyzer.plt"},
+        plt_add_apps: [],
+        ignore_warnings: ".dialyzer/ignore.exs"
+      ]
     ]
   end
 
@@ -25,16 +37,60 @@ defmodule XmlBuilder.Mixfile do
 
   defp deps do
     [
-      {:credo, ">= 1.4.0 and < 1.5.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, github: "elixir-lang/ex_doc", only: :dev}
+      {:credo, "~> 1.4.0", only: [:ci], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:ci], runtime: false},
+      {:excoveralls, "~> 0.14", only: [:test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: [:dev]}
     ]
   end
 
   defp docs do
     [
-      main: "readme",
-      source_url: @source_url,
-      extras: ["README.md"]
+      source_ref: "v#{@version}",
+      canonical: "http://hexdocs.pm/#{@app}",
+      # logo: "stuff/logo-48x48.png",
+      source_url: "https://github.com/am-kantox/#{@app}",
+      extras: ~w[README.md],
+      groups_for_modules: [
+        # XmlBuilder
+
+        Formats: [
+          XmlBuilder.Format.None,
+          XmlBuilder.Format.Indented,
+          XmlBuilder.Format.TabIndented
+        ]
+      ]
+    ]
+  end
+
+  defp description do
+    """
+    XML builder for Elixir
+    """
+  end
+
+  defp package do
+    [
+      name: @app,
+      files: ~w|lib mix.exs README.md|,
+      maintainers: ["Aleksei Matiushkin"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/am-kantox/#{@app}",
+        "Docs" => "https://hexdocs.pm/#{@app}"
+      }
+    ]
+  end
+
+  defp aliases do
+    [
+      quality: ["format", "credo --strict", "dialyzer"],
+      tests: ["coveralls.html --trace"],
+      "quality.ci": [
+        "format --check-formatted",
+        "credo --strict",
+        "dialyzer --halt-exit-status"
+      ]
     ]
   end
 end

@@ -1,11 +1,14 @@
 defmodule XmlBuilderTest do
   use ExUnit.Case
+
   doctest XmlBuilder
+  doctest XmlBuilder.Format.None
+  doctest XmlBuilder.Format.Indented
 
   import ExUnit.CaptureIO
 
   import XmlBuilder,
-    only: [doc: 1, doc: 2, doc: 3, document: 1, document: 2, document: 3, doctype: 2]
+    only: [doc: 1, doc: 2, doc: 3, document: 1, document: 2, document: 3, doctype: 2, generate: 2]
 
   test "empty element" do
     assert document(:person) == [:xml_decl, {:person, nil, nil}]
@@ -87,6 +90,20 @@ defmodule XmlBuilderTest do
     assert warning =~ "doc/1 is deprecated. Use document/1 with generate/1 instead."
   end
 
+  describe "formatters" do
+    test "format: indented content" do
+      assert generate([{:person, %{}, [{:name, %{id: 123}, "Josh"}, {:age, %{}, "21"}]}],
+               format: XmlBuilder.Format.Indented
+             ) == ~s|<person>\n  <name id=\"123\">Josh</name>\n  <age>21</age>\n</person>|
+    end
+
+    test "format: none content" do
+      assert generate([{:person, %{}, [{:name, %{id: 123}, "Josh"}, {:age, %{}, "21"}]}],
+               format: XmlBuilder.Format.None
+             ) == ~s|<person><name id=\"123\">Josh</name><age>21</age></person>|
+    end
+  end
+
   describe "#generate with options" do
     defp input,
       do: {:level1, nil, [{:level2, nil, "test_value"}]}
@@ -109,7 +126,7 @@ defmodule XmlBuilderTest do
 
     test "whitespace character option is used" do
       expectation = "<level1>\n\t<level2>test_value</level2>\n</level1>"
-      assert XmlBuilder.generate(input(), whitespace: "\t") == expectation
+      assert XmlBuilder.generate(input(), format: XmlBuilder.Format.TabIndented) == expectation
     end
 
     test "encoding defaults to UTF-8" do
