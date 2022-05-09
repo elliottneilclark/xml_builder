@@ -50,7 +50,7 @@ defmodule XmlBuilder.Mixfile do
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
       # logo: "stuff/logo-48x48.png",
-      source_url: "https://github.com/am-kantox/#{@app}",
+      source_url: "https://github.com/am-kantox/xml_builder",
       extras: ["README.md"],
       groups_for_modules: [
         XmlBuilder,
