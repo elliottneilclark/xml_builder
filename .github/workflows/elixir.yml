@@ -10,10 +10,10 @@ jobs:
       matrix:
         include:
           - pair:
-              otp: 22.3
+              otp: 22
               elixir: 1.7.4
           - pair:
-              otp: 24.2
+              otp: 24
               elixir: 1.13.4
     steps:
       - uses: actions/checkout@v2
