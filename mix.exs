@@ -37,7 +37,7 @@ defmodule XmlBuilder.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 1.4.0", only: [:ci, :test], runtime: false},
+      {:credo, "~> 1.4", only: [:ci, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:ci], runtime: false},
       {:excoveralls, "~> 0.14", only: [:test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: [:dev]}
@@ -46,14 +46,15 @@ defmodule XmlBuilder.Mixfile do
 
   defp docs do
     [
-      main: "readme",
+      main: "XmlBuilder",
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/#{@app}",
       # logo: "stuff/logo-48x48.png",
       source_url: "https://github.com/am-kantox/xml_builder",
       extras: ["README.md"],
       groups_for_modules: [
-        XmlBuilder,
+        # XmlBuilder,
+        # XmlBuilder.Format,
         Formats: [
           XmlBuilder.Format.None,
           XmlBuilder.Format.Indented,
