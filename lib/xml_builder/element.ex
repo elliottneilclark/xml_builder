@@ -1,21 +1,57 @@
 defmodule XmlBuilder.Element do
-  @moduledoc false
+  @moduledoc """
+  The internal representation of the _XML_ element,
+    responsible for parsing _and_ normalization.
 
+  Generally, you won’t use this internal module.
+  """
+
+  @typedoc "Name of the _XML_ element"
   @type name :: bitstring() | binary() | atom()
-  @type attrs :: map() | nil
-  @type content :: tuple() | String.t()
-  @type contents :: [content()]
 
+  @typedoc "Attributes of the _XML_ element"
+  @type attrs :: map() | nil
+
+  @typedoc "Single inner subelement of the _XML_ element"
+  @type content :: tuple() | String.t()
+
+  @typedoc "Whole inner content of the _XML_ element"
+  @type contents :: [content()] | nil
+
+  @typedoc "The internal representation of the _XML_ element"
   @type t :: %__MODULE__{
           name: name(),
           attrs: attrs(),
-          content: content()
+          content: contents()
         }
+
+  @typedoc "The raw internal representation of the _XML_ element"
+  @type as_tuple :: {name(), attrs(), contents()}
+
+  @typedoc "The AST representation of _XML_"
+  @type ast :: as_tuple() | [as_tuple()]
 
   defstruct name: nil, attrs: %{}, content: nil
 
-  def tuple(element), do: {element.name, element.attrs, element.content}
+  alias XmlBuilder.Element, as: E
 
+  @doc false
+  @spec tuple(t()) :: as_tuple()
+  def tuple(%E{name: name, attrs: attrs, content: content}),
+    do: {name, attrs, content}
+
+  @doc false
+  @spec element(
+          {:iodata, iodata()}
+          | bitstring()
+          | atom()
+          | list()
+          | {name()}
+          | {name(), attrs() | contents()}
+          | {name(), attrs(), contents()}
+          | {nil, nil, {:iodata, iodata()}}
+          | {nil, nil, bitstring()}
+        ) :: as_tuple()
   def element({:iodata, _data} = iodata),
     do: element({nil, nil, iodata})
 
@@ -38,20 +74,23 @@ defmodule XmlBuilder.Element do
     do: element({name, nil, content})
 
   def element({name, attrs, content}) when is_list(content) do
-    #   do: {name, attrs, element(content)}
-    %XmlBuilder.Element{name: name, attrs: attrs, content: Enum.map(content, &element/1)}
-    |> XmlBuilder.Element.tuple()
+    %E{name: name, attrs: attrs, content: Enum.map(content, &element/1)}
+    |> E.tuple()
   end
 
   def element({name, attrs, content}),
     do: {name, attrs, content}
 
+  @doc false
+  @spec element(name(), attrs() | contents()) :: as_tuple()
   def element(name, attrs) when is_map(attrs),
     do: element({name, attrs, nil})
 
   def element(name, content),
     do: element({name, nil, content})
 
+  @doc false
+  @spec element(name(), attrs(), contents()) :: as_tuple()
   def element(name, attrs, content),
     do: element({name, attrs, content})
 end
