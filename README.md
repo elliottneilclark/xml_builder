@@ -254,6 +254,18 @@ doc |> XmlBuilder.generate(format: :none)
 
 The default is to formatting with indentation, which is equivalent to `XmlBuilder.generate(doc, format: :indent)`.
 
+## `Access`
+
+Use `xml_builder_access` library to get the `Access` implemented for
+the generated _XML_ tree.
+
+```elixir
+  {:xml_builder_access, "~> 1.0"}
+```
+
+* [github](https://github.com/am-kantox/xml_builder_access)
+* [docs](https://hexdocs.pm/xml_builder_access)
+
 ## Changelog
 
 * **`3.0.0`** initial fork of the original repo
