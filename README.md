@@ -254,6 +254,12 @@ doc |> XmlBuilder.generate(format: :none)
 
 The default is to formatting with indentation, which is equivalent to `XmlBuilder.generate(doc, format: :indent)`.
 
+## Changelog
+
+* **`3.0.0`** initial fork of the original repo
+* **`3.0.1`** formats, refactoring, specs
+* **`3.1.0`** `XmlBuilder.{pre,post}walk/{2,3}`
+
 ## License
 
 This source code is licensed under the [MIT License](https://github.com/am-kantox/xml_builder/blob/master/LICENSE). Copyright (c) 2014-present, Joshua Nussbaum. All rights reserved.
