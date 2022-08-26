@@ -528,8 +528,8 @@ defmodule XmlBuilder do
       ...>   {:age, _, _}, a -> {{:age, %{}, "24"}, a}
       ...>   e, a -> {e, a}
       ...> end)
-      ...> |> hd()
       ...> |> elem(0)
+      ...> |> hd()
       ...> |> XmlBuilder.generate(format: XmlBuilder.Format.None)
       ~s|<person><name id="123">Josh</name><age>24</age></person>|
   """
@@ -540,7 +540,13 @@ defmodule XmlBuilder do
   end
 
   def prewalk(elements, acc, pre) when is_list(elements) do
-    Enum.map(elements, &prewalk(&1, acc, pre))
+    {elements, acc} =
+      Enum.reduce(elements, {[], acc}, fn element, {elements, acc} ->
+        {e, acc} = prewalk(element, acc, pre)
+        {[e | elements], acc}
+      end)
+
+    {Enum.reverse(elements), acc}
   end
 
   @doc """
@@ -622,8 +628,8 @@ defmodule XmlBuilder do
       ...>   {:age, _, _}, a -> {{:age, %{}, "24"}, a}
       ...>   e, a -> {e, a}
       ...> end)
-      ...> |> hd()
       ...> |> elem(0)
+      ...> |> hd()
       ...> |> XmlBuilder.generate(format: XmlBuilder.Format.None)
       ~s|<person><name id="123">Josh</name><age>24</age></person>|
   """
@@ -634,7 +640,13 @@ defmodule XmlBuilder do
   end
 
   def postwalk(elements, acc, post) when is_list(elements) do
-    Enum.map(elements, &postwalk(&1, acc, post))
+    {elements, acc} =
+      Enum.reduce(elements, {[], acc}, fn element, {elements, acc} ->
+        {e, acc} = postwalk(element, acc, post)
+        {[e | elements], acc}
+      end)
+
+    {Enum.reverse(elements), acc}
   end
 
   @doc """
