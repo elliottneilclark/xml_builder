@@ -484,7 +484,7 @@ defmodule XmlBuilder do
       ...> |> XmlBuilder.generate(format: XmlBuilder.Format.None)
       ~s|<person><name id="123">Josh</name><age>24</age></person>|
   """
-  @spec prewalk(E.ast(), (E.as_tuple(), any() -> {E.as_tuple(), any()})) :: E.as_tuple()
+  @spec prewalk(E.ast(), (E.as_tuple() -> E.as_tuple())) :: E.as_tuple()
   def prewalk({_name, _attrs, _content} = element, pre) do
     element
     |> prewalk(nil, fn x, nil -> {pre.(x), nil} end)
@@ -578,7 +578,7 @@ defmodule XmlBuilder do
       ...> |> XmlBuilder.generate(format: XmlBuilder.Format.None)
       ~s|<person><name id="123">Josh</name><age>24</age></person>|
   """
-  @spec postwalk(E.ast(), (E.as_tuple(), any() -> {E.as_tuple(), any()})) :: E.as_tuple()
+  @spec postwalk(E.ast(), (E.as_tuple() -> E.as_tuple())) :: E.as_tuple()
   def postwalk({_name, _attrs, _content} = element, post) do
     element
     |> postwalk(nil, fn x, nil -> {post.(x), nil} end)
