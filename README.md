@@ -2,7 +2,6 @@ XML Builder
 ===========
 
 
-
 [![CI](https://github.com/am-kantox/xml_builder/workflows/mix/badge.svg)](https://github.com/am-kantox/xml_builder/actions)
 [![Module Version](https://img.shields.io/hexpm/v/xml_builder_ex.svg)](https://hex.pm/packages/xml_builder_ex)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/xml_builder_ex/)
@@ -33,7 +32,7 @@ Add dependency to your project's `mix.exs`:
 
 ```elixir
 def deps do
-  [{:xml_builder, "~> 2.1"}]
+  [{:xml_builder, "~> 3.1"}]
 end
 ```
 
@@ -44,7 +43,7 @@ end
 Like `<person id="12345">Josh</person>`, would look like:
 
 ```elixir
-{:person, %{id: 12345}, "Josh"} |> XmlBuilder.generate
+{:person, %{id: 12345}, "Josh"} |> XmlBuilder.generate()
 ```
 
 ### An element with child elements
@@ -268,6 +267,8 @@ the generated _XML_ tree.
 
 ## Changelog
 
+* **`3.1.3`** `empty: :full` option in a call to `XmlBuilder.generate/2`
+* **`3.1.0`** `XmlBuilder.{traverse,prewalk,postwalk}`
 * **`3.0.0`** initial fork of the original repo
 * **`3.0.1`** formats, refactoring, specs
 * **`3.1.0`** `XmlBuilder.{pre,post}walk/{2,3}`

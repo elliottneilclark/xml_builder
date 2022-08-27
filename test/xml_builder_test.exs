@@ -175,6 +175,34 @@ defmodule XmlBuilderTest do
 
       assert xml == expectation
     end
+
+    test "when empty: :full, full closing tag is used" do
+      inputs = [
+        {:tag, nil, nil},
+        {:tag, nil, []},
+        {:tag, %{}, nil},
+        {:tag, %{}, []}
+      ]
+
+      expectation = "<tag></tag>"
+
+      for input <- inputs do
+        assert XmlBuilder.generate(input, empty: :full) == expectation
+      end
+    end
+
+    test "when empty: :full (with params,) full closing tag is used" do
+      inputs = [
+        {:tag, %{foo: :bar}, nil},
+        {:tag, %{foo: :bar}, []}
+      ]
+
+      expectation = ~s|<tag foo="bar"></tag>|
+
+      for input <- inputs do
+        assert XmlBuilder.generate(input, empty: :full) == expectation
+      end
+    end
   end
 
   test "element with content" do

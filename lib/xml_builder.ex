@@ -102,7 +102,7 @@ defmodule XmlBuilder do
   defdelegate element(a1, a2), to: E
   defdelegate element(a1, a2, a3), to: E
 
-  defp elements_with_prolog([first | rest]) when length(rest) > 0,
+  defp elements_with_prolog([first | rest]) when rest != [],
     do: [first_element(first) | element(rest)]
 
   defp elements_with_prolog(element_spec),
@@ -161,20 +161,49 @@ defmodule XmlBuilder do
   defp format({name, attrs, content}, level, options, _name)
        when is_blank_attrs(attrs) and is_blank_list(content) do
     formatter = formatter(name, options)
-    [formatter.indent(level), '<', to_string(name), '/>']
+
+    if options[:empty] == :full do
+      [
+        formatter.indent(level),
+        '<',
+        to_string(name),
+        '>',
+        formatter.indent(level),
+        '</',
+        to_string(name),
+        '>'
+      ]
+    else
+      [formatter.indent(level), '<', to_string(name), '/>']
+    end
   end
 
   defp format({name, attrs, content}, level, options, _name) when is_blank_list(content) do
     formatter = formatter(name, options)
 
-    [
-      formatter.indent(level),
-      '<',
-      to_string(name),
-      ' ',
-      format_attributes(attrs),
-      '/>'
-    ]
+    if options[:empty] == :full do
+      [
+        formatter.indent(level),
+        '<',
+        to_string(name),
+        ' ',
+        format_attributes(attrs),
+        '>',
+        formatter.indent(level),
+        '</',
+        to_string(name),
+        '>'
+      ]
+    else
+      [
+        formatter.indent(level),
+        '<',
+        to_string(name),
+        ' ',
+        format_attributes(attrs),
+        '/>'
+      ]
+    end
   end
 
   defp format({name, attrs, content}, level, options, _name)
@@ -394,8 +423,10 @@ defmodule XmlBuilder do
     do: {:doctype, {:public, name, public_identifier, system_identifier}}
 
   @doc """
-  Generate a binary from an XML tree. Accepts an optional parameter
-    `format: Format.Module.Name` to specify the formatter to use.
+  Generate a binary from an XML tree. Accepts optional parameters
+
+  - `format: Format.Module.Name` to specify the formatter to use
+  - `empty: :full` to not shorten empty tags `<foo></foo>` to `<foo/>`
 
   The `format` parameter might be shortened to `:none` and `:indented`
     for built-in formatters.
