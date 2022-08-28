@@ -203,6 +203,43 @@ defmodule XmlBuilderTest do
         assert XmlBuilder.generate(input, empty: :full) == expectation
       end
     end
+
+    test "when empty: :full (with indent,) full closing tag is used" do
+      inputs = [
+        {:outer, nil, [{:inner, %{foo: :bar}, []}]}
+      ]
+
+      expectation = ~s|<outer>\n  <inner foo=\"bar\">  </inner>\n</outer>|
+
+      for input <- inputs do
+        assert XmlBuilder.generate(input, empty: :full) == expectation
+      end
+    end
+
+    test "when empty: :full (without indent,) full closing tag is used" do
+      inputs = [
+        {:outer, nil, [{:inner, %{foo: :bar}, []}]}
+      ]
+
+      expectation = ~s|<outer>\n<inner foo=\"bar\"></inner>\n</outer>|
+
+      for input <- inputs do
+        assert XmlBuilder.generate(input, empty: :full, format: [*: :indent, inner: :none]) ==
+                 expectation
+      end
+    end
+
+    test "when empty: :squeezed full closing tag is used" do
+      inputs = [
+        {:outer, nil, [{:inner, %{foo: :bar}, []}]}
+      ]
+
+      expectation = ~s|<outer>\n  <inner foo=\"bar\"></inner>\n</outer>|
+
+      for input <- inputs do
+        assert XmlBuilder.generate(input, empty: :squeezed) == expectation
+      end
+    end
   end
 
   test "element with content" do

@@ -4,19 +4,19 @@ defmodule XmlBuilder do
 
   ## Examples
 
-      iex> XmlBuilder.document(:person) |> XmlBuilder.generate
+      iex> XmlBuilder.document(:person) |> XmlBuilder.generate()
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<person/>"
 
-      iex> XmlBuilder.document(:person, "Josh") |> XmlBuilder.generate
+      iex> XmlBuilder.document(:person, "Josh") |> XmlBuilder.generate()
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<person>Josh</person>"
 
       iex> XmlBuilder.document(:person) |> XmlBuilder.generate(format: :none)
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?><person/>"
 
-      iex> XmlBuilder.element(:person, "Josh") |> XmlBuilder.generate
+      iex> XmlBuilder.element(:person, "Josh") |> XmlBuilder.generate()
       "<person>Josh</person>"
 
-      iex> XmlBuilder.element(:person, %{occupation: "Developer"}, "Josh") |> XmlBuilder.generate
+      iex> XmlBuilder.element(:person, %{occupation: "Developer"}, "Josh") |> XmlBuilder.generate()
       "<person occupation=\\\"Developer\\\">Josh</person>"
   """
 
@@ -33,13 +33,13 @@ defmodule XmlBuilder do
 
   ## Examples
 
-      iex> XmlBuilder.document(:person) |> XmlBuilder.generate
+      iex> XmlBuilder.document(:person) |> XmlBuilder.generate()
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<person/>"
 
-      iex> XmlBuilder.document(:person, %{id: 1}) |> XmlBuilder.generate
+      iex> XmlBuilder.document(:person, %{id: 1}) |> XmlBuilder.generate()
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<person id=\\\"1\\\"/>"
 
-      iex> XmlBuilder.document(:person, %{id: 1}, "some data") |> XmlBuilder.generate
+      iex> XmlBuilder.document(:person, %{id: 1}, "some data") |> XmlBuilder.generate()
       "<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<person id=\\\"1\\\">some data</person>"
   """
   @spec document(E.ast()) :: E.ast()
@@ -162,47 +162,74 @@ defmodule XmlBuilder do
        when is_blank_attrs(attrs) and is_blank_list(content) do
     formatter = formatter(name, options)
 
-    if options[:empty] == :full do
-      [
-        formatter.indent(level),
-        '<',
-        to_string(name),
-        '>',
-        formatter.indent(level),
-        '</',
-        to_string(name),
-        '>'
-      ]
-    else
-      [formatter.indent(level), '<', to_string(name), '/>']
+    case options[:empty] do
+      :full ->
+        [
+          formatter.indent(level),
+          '<',
+          to_string(name),
+          '>',
+          formatter.indent(level),
+          '</',
+          to_string(name),
+          '>'
+        ]
+
+      :squeezed ->
+        [
+          formatter.indent(level),
+          '<',
+          to_string(name),
+          '></',
+          to_string(name),
+          '>'
+        ]
+
+      _ ->
+        [formatter.indent(level), '<', to_string(name), '/>']
     end
   end
 
   defp format({name, attrs, content}, level, options, _name) when is_blank_list(content) do
     formatter = formatter(name, options)
 
-    if options[:empty] == :full do
-      [
-        formatter.indent(level),
-        '<',
-        to_string(name),
-        ' ',
-        format_attributes(attrs),
-        '>',
-        formatter.indent(level),
-        '</',
-        to_string(name),
-        '>'
-      ]
-    else
-      [
-        formatter.indent(level),
-        '<',
-        to_string(name),
-        ' ',
-        format_attributes(attrs),
-        '/>'
-      ]
+    case options[:empty] do
+      :full ->
+        [
+          formatter.indent(level),
+          '<',
+          to_string(name),
+          ' ',
+          format_attributes(attrs),
+          '>',
+          formatter.indent(level),
+          '</',
+          to_string(name),
+          '>'
+        ]
+
+      :squeezed ->
+        [
+          formatter.indent(level),
+          '<',
+          to_string(name),
+          ' ',
+          format_attributes(attrs),
+          '>',
+          '</',
+          to_string(name),
+          '>'
+        ]
+
+      _ ->
+        [
+          formatter.indent(level),
+          '<',
+          to_string(name),
+          ' ',
+          format_attributes(attrs),
+          '/>'
+        ]
     end
   end
 
@@ -381,7 +408,7 @@ defmodule XmlBuilder do
   document([
     doctype("greeting", system: "hello.dtd"),
     element(:person, "Josh")
-  ]) |> generate
+  ]) |> generate()
   ```
 
   Outputs
@@ -403,7 +430,7 @@ defmodule XmlBuilder do
     doctype("html", public: ["-//W3C//DTD XHTML 1.0 Transitional//EN",
                   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"]),
     element(:html, "Hello, world!")
-  ]) |> generate
+  ]) |> generate()
   ```
 
   Outputs
@@ -425,11 +452,11 @@ defmodule XmlBuilder do
   @doc """
   Generate a binary from an XML tree. Accepts optional parameters
 
-  - `format: Format.Module.Name` to specify the formatter to use
-  - `empty: :full` to not shorten empty tags `<foo></foo>` to `<foo/>`
-
-  The `format` parameter might be shortened to `:none` and `:indented`
-    for built-in formatters.
+  - `format: Format.Module.Name` to specify the formatter to use,
+    the `format` parameter might be shortened to `:none` and `:indented` for built-in formatters
+  - `empty: :full | :squeezed` to not shorten empty tags `<foo></foo>` to `<foo/>`,
+    `:full` will preserve the indentation, `:squeezed` would produce closing tag immediately after
+    the opening one, without spaces
 
   Returns a `binary`.
 
