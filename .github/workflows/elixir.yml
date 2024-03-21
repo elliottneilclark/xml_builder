@@ -4,14 +4,11 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Elixir ${{matrix.elixir}} (Erlang/OTP ${{matrix.otp}})
+    name: Elixir ${{matrix.pair.elixir}} (Erlang/OTP ${{matrix.pair.otp}})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - pair:
-              otp: 24
-              elixir: 1.14
           - pair:
               otp: 26
               elixir: 1.16
