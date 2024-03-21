@@ -268,7 +268,7 @@ the generated _XML_ tree.
 
 ## Changelog
 
-* **`3.1.41`** `Application.get_env(:xml_builder, :arrogant_floats)` and`Application.get_env(:xml_builder, :float_notation)`
+* **`3.1.41`** `Application.get_env(:xml_builder, :arrogant_floats)` and `Application.get_env(:xml_builder, :float_notation)`
 * **`3.1.4`** `empty: :squeezed` option in a call to `XmlBuilder.generate/2`
 * **`3.1.3`** `empty: :full` option in a call to `XmlBuilder.generate/2`
 * **`3.1.0`** `XmlBuilder.{traverse,prewalk,postwalk}`

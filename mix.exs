@@ -9,6 +9,7 @@ defmodule XmlBuilder.Mixfile do
       app: @app,
       version: @version,
       elixir: "~> 1.9",
+      prune_code_paths: false,
       deps: deps(),
       docs: docs(),
       package: package(),
