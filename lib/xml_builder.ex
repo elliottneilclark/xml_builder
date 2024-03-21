@@ -143,8 +143,9 @@ defmodule XmlBuilder do
       ~c"\">"
     ]
 
-  defp format(string, level, options, name) when is_bitstring(string),
-    do: format({nil, nil, string}, level, options, name)
+  defp format(value, level, options, name)
+       when is_bitstring(value) or is_boolean(value) or is_number(value),
+       do: format({nil, nil, value}, level, options, name)
 
   defp format(list, level, options, name) when is_list(list) do
     formatter = formatter(name, options)
@@ -154,6 +155,12 @@ defmodule XmlBuilder do
   defp format({nil, nil, content}, level, options, name) when is_bitstring(content) do
     formatter = formatter(name, options)
     [formatter.indent(level), to_string(content)]
+  end
+
+  defp format({nil, nil, content}, level, options, name)
+       when is_boolean(content) or is_number(content) do
+    formatter = formatter(name, options)
+    [formatter.indent(level), escape(content)]
   end
 
   defp format({nil, nil, {:iodata, iodata}}, _level, _options, _name), do: iodata
