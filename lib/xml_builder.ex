@@ -102,7 +102,7 @@ defmodule XmlBuilder do
   defdelegate element(a1, a2), to: E
   defdelegate element(a1, a2, a3), to: E
 
-  defp elements_with_prolog([first | rest]) when rest != [],
+  defp elements_with_prolog([first | [_ | _] = rest]),
     do: [first_element(first) | element(rest)]
 
   defp elements_with_prolog(element_spec),
@@ -126,21 +126,21 @@ defmodule XmlBuilder do
         nil -> ""
       end
 
-    ['<?xml version="1.0" encoding="', to_string(encoding), ?", standalone, '?>']
+    [~c"<?xml version=\"1.0\" encoding=\"", to_string(encoding), ?", standalone, ~c"?>"]
   end
 
   defp format({:doctype, {:system, name, system}}, 0, _options, _name),
-    do: ['<!DOCTYPE ', to_string(name), ' SYSTEM "', to_string(system), '">']
+    do: [~c"<!DOCTYPE ", to_string(name), ~c" SYSTEM \"", to_string(system), ~c"\">"]
 
   defp format({:doctype, {:public, name, public, system}}, 0, _options, _name),
     do: [
-      '<!DOCTYPE ',
+      ~c"<!DOCTYPE ",
       to_string(name),
-      ' PUBLIC "',
+      ~c" PUBLIC \"",
       to_string(public),
-      '" "',
+      ~c"\" \"",
       to_string(system),
-      '">'
+      ~c"\">"
     ]
 
   defp format(string, level, options, name) when is_bitstring(string),
@@ -166,27 +166,27 @@ defmodule XmlBuilder do
       :full ->
         [
           formatter.indent(level),
-          '<',
+          ~c"<",
           to_string(name),
-          '>',
+          ~c">",
           formatter.indent(level),
-          '</',
+          ~c"</",
           to_string(name),
-          '>'
+          ~c">"
         ]
 
       :squeezed ->
         [
           formatter.indent(level),
-          '<',
+          ~c"<",
           to_string(name),
-          '></',
+          ~c"></",
           to_string(name),
-          '>'
+          ~c">"
         ]
 
       _ ->
-        [formatter.indent(level), '<', to_string(name), '/>']
+        [formatter.indent(level), ~c"<", to_string(name), ~c"/>"]
     end
   end
 
@@ -197,38 +197,38 @@ defmodule XmlBuilder do
       :full ->
         [
           formatter.indent(level),
-          '<',
+          ~c"<",
           to_string(name),
-          ' ',
+          ~c" ",
           format_attributes(attrs),
-          '>',
+          ~c">",
           formatter.indent(level),
-          '</',
+          ~c"</",
           to_string(name),
-          '>'
+          ~c">"
         ]
 
       :squeezed ->
         [
           formatter.indent(level),
-          '<',
+          ~c"<",
           to_string(name),
-          ' ',
+          ~c" ",
           format_attributes(attrs),
-          '>',
-          '</',
+          ~c">",
+          ~c"</",
           to_string(name),
-          '>'
+          ~c">"
         ]
 
       _ ->
         [
           formatter.indent(level),
-          '<',
+          ~c"<",
           to_string(name),
-          ' ',
+          ~c" ",
           format_attributes(attrs),
-          '/>'
+          ~c"/>"
         ]
     end
   end
@@ -239,13 +239,13 @@ defmodule XmlBuilder do
 
     [
       formatter.indent(level),
-      '<',
+      ~c"<",
       to_string(name),
-      '>',
+      ~c">",
       format_content(name, content, level + 1, options),
-      '</',
+      ~c"</",
       to_string(name),
-      '>'
+      ~c">"
     ]
   end
 
@@ -256,15 +256,15 @@ defmodule XmlBuilder do
 
     [
       formatter.indent(level),
-      '<',
+      ~c"<",
       to_string(name),
-      '>',
+      ~c">",
       format_content(name, content, level + 1, options),
       format_char,
       formatter.indent(level),
-      '</',
+      ~c"</",
       to_string(name),
-      '>'
+      ~c">"
     ]
   end
 
@@ -274,15 +274,15 @@ defmodule XmlBuilder do
 
     [
       formatter.indent(level),
-      '<',
+      ~c"<",
       to_string(name),
-      ' ',
+      ~c" ",
       format_attributes(attrs),
-      '>',
+      ~c">",
       format_content(name, content, level + 1, options),
-      '</',
+      ~c"</",
       to_string(name),
-      '>'
+      ~c">"
     ]
   end
 
@@ -293,17 +293,17 @@ defmodule XmlBuilder do
 
     [
       formatter.indent(level),
-      '<',
+      ~c"<",
       to_string(name),
-      ' ',
+      ~c" ",
       format_attributes(attrs),
-      '>',
+      ~c">",
       format_content(name, content, level + 1, options),
       format_char,
       formatter.indent(level),
-      '</',
+      ~c"</",
       to_string(name),
-      '>'
+      ~c">"
     ]
   end
 
@@ -335,7 +335,7 @@ defmodule XmlBuilder do
   defp format_attributes(attrs),
     do:
       map_intersperse(attrs, " ", fn {name, value} ->
-        [to_string(name), '=', quote_attribute_value(value)]
+        [to_string(name), ~c"=", quote_attribute_value(value)]
       end)
 
   defp quote_attribute_value(val) when not is_bitstring(val),
@@ -365,6 +365,20 @@ defmodule XmlBuilder do
 
   defp escape(data) when is_binary(data),
     do: data |> escape_string() |> to_string()
+
+  if Application.compile_env(:xml_builder, :arrogant_floats, false) do
+    defp escape(data) when is_float(data) do
+      :erlang.float_to_binary(data, [{:decimals, 8}, :compact])
+    end
+  else
+    defp escape(data) when is_float(data) do
+      case Application.get_env(:xml_builder, :float_notation, :default) do
+        :default -> Float.to_string(data)
+        :scientific -> :erlang.float_to_binary(data)
+        _ -> :erlang.float_to_binary(data, [{:decimals, 8}, :compact])
+      end
+    end
+  end
 
   defp escape(data) when not is_bitstring(data),
     do: data |> to_string() |> escape_string() |> to_string()

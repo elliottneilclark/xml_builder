@@ -256,7 +256,7 @@ defmodule XmlBuilderTest do
     warning =
       capture_io(:stderr, fn ->
         assert doc(:person, %{occupation: "Developer", city: "Montreal"}) ==
-                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person city="Montreal" occupation="Developer"/>|
+                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person occupation="Developer" city="Montreal"/>|
 
         assert doc(:person, %{}) == ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person/>|
       end)
@@ -268,10 +268,10 @@ defmodule XmlBuilderTest do
     warning =
       capture_io(:stderr, fn ->
         assert doc(:person, %{occupation: "Developer", city: "Montreal"}, "Josh") ==
-                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person city="Montreal" occupation="Developer">Josh</person>|
+                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person occupation="Developer" city="Montreal">Josh</person>|
 
         assert doc(:person, %{occupation: "Developer", city: "Montreal"}, nil) ==
-                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person city="Montreal" occupation="Developer"/>|
+                 ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person occupation="Developer" city="Montreal"/>|
 
         assert doc(:person, %{}, "Josh") ==
                  ~s|<?xml version="1.0" encoding="UTF-8"?>\n<person>Josh</person>|
@@ -394,7 +394,7 @@ defmodule XmlBuilderTest do
 
     assert XmlBuilder.element(:person, {:iodata, ["test", ?i, "ng 123"]})
            |> XmlBuilder.generate_iodata() ==
-             ["", '<', "person", '>', ["test", ?i, "ng 123"], '</', "person", '>']
+             ["", ~c"<", "person", ~c">", ["test", ?i, "ng 123"], ~c"</", "person", ~c">"]
   end
 
   test "multi level indentation" do
@@ -405,6 +405,31 @@ defmodule XmlBuilderTest do
       end)
 
     assert warning =~ "doc/1 is deprecated. Use document/1 with generate/1 instead."
+  end
+
+  test "different notations for floats" do
+    assert element(:person, {:iodata, [element(:name, "john"), element(:age, 1_000_000)]}) ==
+             "<person><name>john</name><age>1000000</age></person>"
+
+    Application.delete_env(:xml_builder, :float_notation)
+
+    assert element(:person, {:iodata, [element(:name, "john"), element(:age, 1_000_000.0)]}) ==
+             "<person><name>john</name><age>1.0e6</age></person>"
+
+    Application.put_env(:xml_builder, :float_notation, :scientific)
+
+    assert element(:person, {:iodata, [element(:name, "john"), element(:age, 1_000_000.0)]}) ==
+             "<person><name>john</name><age>1.00000000000000000000e+06</age></person>"
+
+    Application.put_env(:xml_builder, :float_notation, :arrogant)
+
+    assert element(:person, {:iodata, [element(:name, "john"), element(:age, 1_000_000.0)]}) ==
+             "<person><name>john</name><age>1000000.0</age></person>"
+
+    Application.put_env(:xml_builder, :float_notation, :default)
+
+    assert element(:person, {:iodata, [element(:name, "john"), element(:age, 1_000_000.0)]}) ==
+             "<person><name>john</name><age>1.0e6</age></person>"
   end
 
   def element(name, arg),
