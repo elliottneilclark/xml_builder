@@ -144,7 +144,7 @@ defmodule XmlBuilder do
     ]
 
   defp format(value, level, options, name)
-       when is_bitstring(value) or is_boolean(value) or is_number(value),
+       when is_bitstring(value) or is_boolean(value) or is_number(value) or is_nil(value),
        do: format({nil, nil, value}, level, options, name)
 
   defp format(list, level, options, name) when is_list(list) do
