@@ -78,7 +78,7 @@ defmodule XmlBuilder.Mixfile do
       maintainers: ["Aleksei Matiushkin"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/am-kantox/#{@app}",
+        "GitHub" => "https://github.com/am-kantox/xml_builder",
         "Docs" => "https://hexdocs.pm/#{@app}"
       }
     ]
